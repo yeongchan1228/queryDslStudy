@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
 
+import static jpa.queryDsl.entity.QMember.*;
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
@@ -41,7 +42,6 @@ public class QueryDslBasicTest {
         em.persist(memberB);
         em.persist(memberC);
         em.persist(memberD);
-        System.out.println(" = tlf");
     }
 
     @Test
@@ -56,11 +56,9 @@ public class QueryDslBasicTest {
     
     @Test
     public void startQueryDsl() throws Exception {
-        QMember m = QMember.member;
-
         Member findMemberA = query
-                .selectFrom(m)
-                .where(m.username.eq("memberA"))
+                .selectFrom(member)
+                .where(member.username.eq("memberA"))
                 .fetchOne();
 
         assertThat(findMemberA.getUsername()).isEqualTo("memberA");
