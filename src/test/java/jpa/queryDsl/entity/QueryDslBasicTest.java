@@ -17,7 +17,14 @@ import static org.assertj.core.api.Assertions.*;
 @Rollback(value = false)
 public class QueryDslBasicTest {
 
-    @Autowired EntityManager em;
+    EntityManager em;
+    JPAQueryFactory query;
+
+    @Autowired
+    public QueryDslBasicTest(EntityManager em) {
+        this.em = em;
+        query = new JPAQueryFactory(em);
+    }
 
     @BeforeEach
     public void before(){
@@ -49,7 +56,6 @@ public class QueryDslBasicTest {
     
     @Test
     public void startQueryDsl() throws Exception {
-        JPAQueryFactory query = new JPAQueryFactory(em);
         QMember m = QMember.member;
 
         Member findMemberA = query
