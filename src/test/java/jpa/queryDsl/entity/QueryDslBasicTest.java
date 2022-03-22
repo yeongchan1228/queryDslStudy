@@ -3,11 +3,9 @@ package jpa.queryDsl.entity;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
-import com.querydsl.core.types.dsl.CaseBuilder;
-import com.querydsl.core.types.dsl.Expressions;
-import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.core.types.dsl.Wildcard;
+import com.querydsl.core.types.dsl.*;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -629,7 +627,8 @@ public class QueryDslBasicTest {
 
     /**
      * 동적 쿼리
-     * booleanBuilder, where
+     * booleanBuilder, where 다중 파라미터
+     * where 절은 null 무시
      */
     @Test
     public void dynamicQuery_BooleanBuilder() throws Exception {
@@ -665,5 +664,38 @@ public class QueryDslBasicTest {
                 .selectFrom(member)
                 .where(builder)
                 .fetch();
+    }
+
+    @Test
+    public void dynamicQuery_whereParam() throws Exception {
+        String usernameParam = "memberA";
+        Integer ageParam = 10;
+
+        List<Member> result = searchMember2(usernameParam, ageParam);
+        assertThat(result.size()).isEqualTo(1);
+    }
+
+    private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+
+        return query
+                .selectFrom(member)
+//                .where(usernameEq(usernameCond), ageEq(ageCond)) // ,는 and
+                .where(allEq(usernameCond, ageCond))
+                .fetch();
+    }
+
+    private BooleanExpression usernameEq(String usernameCond) {
+        return usernameCond != null ? member.username.eq(usernameCond) : null;
+    }
+
+    private BooleanExpression ageEq(Integer ageCond) {
+        if(ageCond != null)
+            return member.age.eq(ageCond);
+        else
+            return null;
+    }
+
+    private BooleanExpression allEq(String usernameCond, Integer ageCond){
+        return usernameEq(usernameCond).and(ageEq(ageCond));
     }
 }
