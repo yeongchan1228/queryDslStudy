@@ -1,5 +1,8 @@
 package jpa.queryDsl.entity;
 
+import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.Wildcard;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,7 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
 
+import java.util.List;
+
 import static jpa.queryDsl.entity.QMember.*;
+import static jpa.queryDsl.entity.QTeam.*;
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
@@ -18,17 +24,13 @@ import static org.assertj.core.api.Assertions.*;
 @Rollback(value = false)
 public class QueryDslBasicTest {
 
-    EntityManager em;
+    @Autowired EntityManager em;
     JPAQueryFactory query;
-
-    @Autowired
-    public QueryDslBasicTest(EntityManager em) {
-        this.em = em;
-        query = new JPAQueryFactory(em);
-    }
 
     @BeforeEach
     public void before(){
+        query = new JPAQueryFactory(em);
+
         Team teamA = new Team("teamA");
         Team teamB = new Team("teamB");
         em.persist(teamA);
@@ -64,4 +66,207 @@ public class QueryDslBasicTest {
         assertThat(findMemberA.getUsername()).isEqualTo("memberA");
 
     }
+
+    @Test
+    public void search() throws Exception {
+        Member findMember = query
+                .selectFrom(member)
+                .where(member.username.eq("memberA").and(member.age.eq(10)))
+                .fetchOne();
+
+        assertThat(findMember.getUsername()).isEqualTo("memberA");
+
+        List<Member> result = query
+                .selectFrom(member)
+                .where((member.age.between(10, 30)))
+                .fetch();
+
+        assertThat(result.size()).isEqualTo(3);
+        /**
+         * eq : =
+         * ne : !=
+         * eq(~).not() : !=
+         * isNotNull() : is not null
+         * in(10, 20) : 10 or 20
+         * notIn() : !(10 or 20)
+         * between(10, 30) : 10 <= x <=30
+         * goe(30) : great or equal  x >= 30
+         * gt(30) : great then x > 30
+         * loe(30) : low or equal x <= 30
+         * lt(30) : low then x < 30
+         * like("member%") : like 검색
+         * contains("member") : %member% like 검색
+         * startWith("member") member% like 검색
+         */
+    }
+    
+    @Test
+    public void searchAndParam() throws Exception {
+        Member findMember = query
+                .selectFrom(member)
+                .where(member.username.eq("memberA"), member.age.eq(10)) // ,로 and 지원 -> null 무시 가능
+                .fetchOne();
+
+        assertThat(findMember.getUsername()).isEqualTo("memberA");
+    }
+    
+    @Test
+    public void resultFetchTest() throws Exception {
+        List<Member> result = query
+                .selectFrom(member)
+                .fetch(); // 결과를 리스트로 반환
+
+        Member result2 = query
+                .selectFrom(member)
+                .where(member.username.eq("memberA"))
+                .fetchOne(); // 단건 조회
+
+        Member result3 = query
+                .selectFrom(QMember.member)
+                .fetchFirst(); // .limit(1).fetchOne()과 동일, 여러 개가 있어도 한 개만 반환 -> limit 1
+
+        Long totalCount = query
+                .select(member.count()) // member_id 기반 카운트 탐색
+                .from(member)
+                .fetchOne();
+        System.out.println("totalCount = " + totalCount);
+
+        Long totalCount2 = query
+                .select(Wildcard.count) // count(*) 탐색
+                .from(member)
+                .fetchOne();
+        System.out.println("totalCount2 = " + totalCount2);
+
+    }
+
+    /**
+     * 회원 나이 내림차순(desc)
+     * 회원 이름 올림차순(asc)
+     * 단 회원 이름이 없으면 마지막(nulls last)
+     */
+    @Test
+    public void sort() throws Exception {
+        // 회원 보충
+        em.persist(new Member(null, 100));
+        em.persist(new Member("memberE", 100));
+        em.persist(new Member("memberF", 100));
+
+        List<Member> result = query
+                .selectFrom(member)
+                .orderBy(member.age.desc(), member.username.asc().nullsLast())
+                .fetch();
+
+        for (Member member1 : result) {
+            System.out.println(member1);
+        }
+    }
+
+    @Test
+    public void paging() throws Exception {
+        List<Member> result = query
+                .selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(1) // 0부터 시작이라 1개 스킵 의미
+                .limit(2)
+                .fetch();
+
+        Long totalCount = query
+                .select(member.count())
+                .from(member)
+                .fetchOne();
+
+        assertThat(result.size()).isEqualTo(2);
+        assertThat(totalCount).isEqualTo(4);
+        assertThat(totalCount/result.size()).isEqualTo(2); // 페이징 개수
+    }
+
+    @Test
+    public void aggregation() throws Exception {
+        List<Tuple> result = query
+                .select(member.count(), member.age.sum(), member.age.avg(), member.age.max(), member.age.min())
+                .from(member)
+                .fetch();
+
+        Tuple tuple = result.get(0);
+        assertThat(tuple.size()).isEqualTo(5); // 위 member.count() ... 총 5개
+        assertThat(tuple.get(member.count())).isEqualTo(4);
+        assertThat(tuple.get(member.age.max())).isEqualTo(40);
+    }
+
+    /**
+     * 각 팀의 이름과 평균 연령
+     */
+    @Test
+    public void group() throws Exception {
+        List<Tuple> result = query
+                .select(team.name, member.age.avg())
+                .from(member)
+                .join(member.team, team)
+                .groupBy(team.name)
+                .fetch();
+
+        Tuple teamA = result.get(0);
+        Tuple teamB = result.get(1);
+
+        assertThat(teamA.get(team.name)).isEqualTo("teamA");
+        assertThat(teamA.get(member.age.avg())).isEqualTo(15);
+        assertThat(teamB.get(team.name)).isEqualTo("teamB");
+        assertThat(teamB.get(member.age.avg())).isEqualTo(35);
+    }
+
+    @Test
+    public void join() throws Exception {
+        /**
+         * inner : null X
+         * outer(left, right) : null O
+         */
+        List<Member> result = query
+                .selectFrom(member)
+                .join(member.team, team)
+                .where(team.name.eq("teamA"))
+                .fetch();
+
+        assertThat(result).extracting("username").containsExactly("memberA", "memberB");
+
+
+        em.persist(new Member("member1", 20));
+        em.persist(new Member("member2", 20));
+        List<Member> result2 = query
+                .selectFrom(member)
+                .join(member.team, team)
+                .fetch();
+        assertThat(result2.size()).isEqualTo(4);
+
+        List<Member> result3 = query
+                .selectFrom(member)
+                .leftJoin(member.team, team)
+                .fetch();
+        assertThat(result3.size()).isEqualTo(6);
+
+        List<Member> result4 = query
+                .selectFrom(member)
+                .rightJoin(member.team, team)
+                .fetch();
+        assertThat(result4.size()).isEqualTo(4);
+    }
+
+    /**
+     * 회원 이름과 팀 이름이 같은 회원 조회
+     * 막 조인
+     * 외부 조인 불가
+     */
+    @Test
+    public void theta_join() throws Exception {
+         em.persist(new Member("teamA"));
+         em.persist(new Member("teamB"));
+         em.persist(new Member("teamC"));
+
+        List<Member> result = query
+                .select(member)
+                .from(member, team)
+                .where(team.name.eq(member.username))
+                .fetch();
+        assertThat(result.size()).isEqualTo(2);
+    }
+
 }
