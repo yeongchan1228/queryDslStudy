@@ -500,4 +500,36 @@ public class QueryDslBasicTest {
             System.out.println("s = " + s);
         }
     }
+
+    /**
+     * Projection
+     * Tuple은 queryDsl 종속적으로 api로 반환할 때는 Dto 사용
+     */
+    @Test
+    public void simpleProjection() throws Exception {
+        List<String> result = query
+                .select(member.username)
+                .from(member)
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
+    @Test
+    public void tupleProjection() throws Exception {
+        List<Tuple> result = query
+                .select(member.username, member.age)
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+            System.out.println("tuple.get(member.username) = " + tuple.get(member.username));
+            System.out.println("tuple.get(member.age) = " + tuple.get(member.age));
+        }
+
+    }
+
 }
