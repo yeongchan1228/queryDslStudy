@@ -1,5 +1,6 @@
 package jpa.queryDsl.entity;
 
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Projections;
@@ -11,6 +12,7 @@ import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jpa.queryDsl.dto.MemberDto;
+import jpa.queryDsl.dto.QMemberDto;
 import jpa.queryDsl.dto.UserDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -612,5 +614,56 @@ public class QueryDslBasicTest {
         for (UserDto userDto : result) {
             System.out.println("userDto = " + userDto);
         }
+    }
+    @Test
+    public void findDtoByQueryProjection() throws Exception {
+        List<MemberDto> result = query
+                .select(new QMemberDto(member.username, member.age))
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+    }
+
+    /**
+     * 동적 쿼리
+     * booleanBuilder, where
+     */
+    @Test
+    public void dynamicQuery_BooleanBuilder() throws Exception {
+        String usernameParam = "memberA";
+        Integer ageParam = 20;
+
+        List<Member> result = searchMember1(usernameParam, ageParam);
+        assertThat(result.size()).isEqualTo(2);
+    }
+
+    // null이냐 값이 있냐 고려
+    private List<Member> searchMember1(String usernameCond, Integer ageCond) {
+        BooleanBuilder builder = new BooleanBuilder();
+//        if(usernameCond != null){
+//            builder.and(member.username.eq(usernameCond));
+//        }
+//
+//        if(ageCond != null){
+//            builder.and(member.age.eq(ageCond));
+//        }
+
+        if(usernameCond != null){
+            builder.and(member.username.eq(usernameCond));
+        }
+
+        if(ageCond != null){
+            builder.or(member.age.eq(ageCond));
+        }
+
+        // => 없음 and/or(둘다 가능) member.username.eq(usernameCond) or member.age.eq(ageCond)
+
+        return query
+                .selectFrom(member)
+                .where(builder)
+                .fetch();
     }
 }
