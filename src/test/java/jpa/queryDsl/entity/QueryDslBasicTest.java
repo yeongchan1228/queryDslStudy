@@ -1,6 +1,8 @@
 package jpa.queryDsl.entity;
 
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.core.types.dsl.Wildcard;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
@@ -416,4 +418,54 @@ public class QueryDslBasicTest {
         }
     }
 
+    /**
+     * case 문
+     */
+    @Test
+    public void basicCase() throws Exception {
+
+        List<String> result = query
+                .select(member.age
+                        .when(10).then("열살")
+                        .when(20).then("스무살").otherwise("기타"))
+                .from(member)
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+    
+    @Test
+    public void complexCase() throws Exception {
+        List<String> result = query
+                .select(new CaseBuilder()
+                        .when(member.age.between(10, 20)).then("10~20살")
+                        .when(member.age.between(20, 30)).then("20~30살")
+                        .otherwise("기타"))
+                .from(member)
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
+    @Test
+    public void Case() throws Exception {
+        NumberExpression<Integer> rank
+                = new CaseBuilder().when(member.age.between(0, 20)).then(2)
+                .when(member.age.between(21, 30)).then(1)
+                .otherwise(3);
+
+        List<Tuple> result = query
+                .select(member.username, member.age, rank)
+                .from(member)
+                .orderBy(rank.desc())
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
 }
