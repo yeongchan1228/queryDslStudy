@@ -12,6 +12,8 @@ import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceUnit;
 
 import java.util.List;
 
@@ -308,4 +310,35 @@ public class QueryDslBasicTest {
         }
     }
 
+    @PersistenceUnit
+    EntityManagerFactory emf;
+
+    @Test
+    public void fetchJoinNo() throws Exception {
+        em.flush();
+        em.clear();
+
+        Member findOne = query
+                .selectFrom(member)
+                .where(member.username.eq("memberA"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findOne.getTeam()); // 영속성 컨텍스트에 존재하는지 알려줌
+        assertThat(loaded).as("패치 조인 미적용").isFalse();
+    }
+
+    @Test
+    public void fetchJoinUse() throws Exception {
+        em.flush();
+        em.clear();
+
+        Member findOne = query
+                .selectFrom(member)
+                .join(member.team, team).fetchJoin()
+                .where(member.username.eq("memberA"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findOne.getTeam()); // 영속성 컨텍스트에 존재하는지 알려줌
+        assertThat(loaded).as("패치 조인 적용").isTrue();
+    }
 }
