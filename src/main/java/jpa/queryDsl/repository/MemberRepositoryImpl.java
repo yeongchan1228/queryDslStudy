@@ -63,6 +63,8 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom{
                         ageLoe(searchCond.getAgeLoe())
                 );
 
+        // 페이지 보다 검색 결과가 적을 때, 페이지 마지막일 땐 카운트 쿼리를 날릴 필요가 없기 때문에 그런 경우
+        // countQuery::fetchOne은 알아서 실행되지 않는다. -> 필요할 때만 사용한다. 알아서.
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
 
     }
