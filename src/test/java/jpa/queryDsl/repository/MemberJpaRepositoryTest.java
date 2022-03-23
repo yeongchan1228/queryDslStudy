@@ -84,4 +84,31 @@ class MemberJpaRepositoryTest {
             System.out.println("memberTeamDto = " + memberTeamDto);
         }
     }
+
+    @Test
+    public void whereTest() throws Exception {
+        // given
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        em.persist(teamA);
+        em.persist(teamB);
+
+        Member memberA = new Member("memberA", 10, teamA);
+        Member memberB = new Member("memberB", 20, teamA);
+        Member memberC = new Member("memberC", 30, teamB);
+        Member memberD = new Member("memberD", 40, teamB);
+        em.persist(memberA);
+        em.persist(memberB);
+        em.persist(memberC);
+        em.persist(memberD);
+
+        // when
+        SearchCond cond = new SearchCond("memberA", "teamB", 10, null);
+        List<MemberTeamDto> result = memberJpaRepository.searchByWhere(cond);
+
+        // then
+        for (MemberTeamDto memberTeamDto : result) {
+            System.out.println("memberTeamDto = " + memberTeamDto);
+        }
+    }
 }
