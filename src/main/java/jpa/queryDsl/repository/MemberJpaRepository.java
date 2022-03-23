@@ -1,6 +1,8 @@
 package jpa.queryDsl.repository;
 
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Predicate;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPQLQueryFactory;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jpa.queryDsl.dto.MemberTeamDto;
@@ -84,5 +86,45 @@ public class MemberJpaRepository {
                 .where(builder)
                 .fetch();
 
+    }
+
+    public List<MemberTeamDto> searchByWhere(SearchCond searchCond){
+        return queryFactory
+                .select(new QMemberTeamDto(member.id, member.username, member.age, team.id, team.name))
+                .from(member)
+                .leftJoin(member.team, team)
+                .where(
+//                        userNameEq(searchCond.getUsername()),
+//                        teamNameEq(searchCond.getTeamName()),
+                        //                        userAgeGoe(searchCond.getAgeGoe()),
+//                        userAgeLoe(searchCond.getAgeLoe())
+                        userNameEq(searchCond.getUsername())
+                                .or(teamNameEq(searchCond.getTeamName())),
+                        userAgeGoe(searchCond.getAgeGoe()),
+                        userAgeLoe(searchCond.getAgeLoe())
+//                        ageBetween(searchCond.getAgeGoe(), searchCond.getAgeLoe()) // 만약 getAgeGoe()나 getAgeLoe() 중 하나라도 null이면 오류 발생
+                )
+                .fetch();
+    }
+
+    private BooleanExpression userNameEq(String usernameCond) {
+        return usernameCond == null ? null : member.username.eq(usernameCond);
+    }
+
+    private BooleanExpression teamNameEq(String teamNameCond) {
+        return teamNameCond == null ? null : team.name.eq(teamNameCond);
+    }
+
+    private BooleanExpression userAgeGoe(Integer ageGoeCond) {
+        return ageGoeCond == null ? null : member.age.goe(ageGoeCond);
+    }
+
+    private BooleanExpression userAgeLoe(Integer ageLoeCond) {
+        return ageLoeCond == null ? null : member.age.loe(ageLoeCond);
+    }
+
+    private BooleanExpression ageBetween(int a, int b){
+        // 이런 문장을 null 체크를 잘 해주어야 한다.
+        return userAgeGoe(a).and(userAgeLoe(b));
     }
 }
