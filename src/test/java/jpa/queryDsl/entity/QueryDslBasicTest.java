@@ -744,4 +744,36 @@ public class QueryDslBasicTest {
         em.flush();
         em.clear();
     }
+
+    /**
+     * SQL function 호출
+     */
+    
+    @Test
+    public void sqlFunction() throws Exception {
+        List<String> result = query
+                .select(Expressions.stringTemplate(
+                        "function('replace', {0}, {1}, {2})",
+                        member.username, "member", "M"
+                ))
+                .from(member)
+                .fetch();
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+    
+    @Test
+    public void sqlFunction2() throws Exception {
+        // 웬만한 자주 사용되는 sql 함수는 queryDsl에 내장되어 있다.
+        List<String> result = query
+                .select(member.username.lower())
+                .from(member)
+                .where(member.username.eq("memberA"))
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
 }
