@@ -698,4 +698,50 @@ public class QueryDslBasicTest {
     private BooleanExpression allEq(String usernameCond, Integer ageCond){
         return usernameEq(usernameCond).and(ageEq(ageCond));
     }
+
+    /**
+     * 벌크 연산
+     */
+    @Test
+    public void bulkUpdate() throws Exception {
+        long count = query
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(28))
+                .execute();
+
+        assertThat(count).isEqualTo(2);
+
+        // 벌크 연산은 항상 영속성 컨텍스트를 무시하기 때문에 초기화가 필요함
+        em.flush();
+        em.clear();
+
+    }
+
+    @Test
+    public void bulkAdd() throws Exception {
+        long count = query
+                .update(member)
+                .set(member.age, member.age.add(1)) // 뺄 때는 -1
+                .execute();
+
+        assertThat(count).isEqualTo(4);
+
+        em.flush();
+        em.clear();
+
+    }
+
+    @Test
+    public void bulkDelete() throws Exception {
+        long count = query
+                .delete(member)
+                .where(member.age.lt(20))
+                .execute();
+
+        assertThat(count).isEqualTo(1);
+
+        em.flush();
+        em.clear();
+    }
 }
