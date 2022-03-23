@@ -3,6 +3,7 @@ package jpa.queryDsl.repository;
 import jpa.queryDsl.dto.MemberTeamDto;
 import jpa.queryDsl.dto.SearchCond;
 import jpa.queryDsl.entity.Member;
+import jpa.queryDsl.entity.QMember;
 import jpa.queryDsl.entity.Team;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -95,5 +96,31 @@ class MemberRepositoryTest {
         for (MemberTeamDto memberTeamDto : result) {
             System.out.println("memberTeamDto = " + memberTeamDto);
         }
+    }
+    
+    @Test
+    public void queryDslPredicateExecutorTest() throws Exception {
+        // given
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        em.persist(teamA);
+        em.persist(teamB);
+
+        Member memberA = new Member("memberA", 10, teamA);
+        Member memberB = new Member("memberB", 20, teamA);
+        Member memberC = new Member("memberC", 30, teamB);
+        Member memberD = new Member("memberD", 40, teamB);
+        em.persist(memberA);
+        em.persist(memberB);
+        em.persist(memberC);
+        em.persist(memberD);
+
+        // when
+        QMember member = QMember.member;
+        Iterable<Member> findMember = memberRepository.findAll(member.age.between(10, 30).and(member.username.eq("memberA")));
+
+
+        // then
+        System.out.println("findMember = " + findMember);
     }
 }
