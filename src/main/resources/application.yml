@@ -1,4 +1,9 @@
 spring:
+  # 로컬에서만(Test에선 실행 안되도록) 실행되게 프로파일 설정
+  # 개발 서버 : dev, 운영 서버 : real
+  profiles:
+    active: local
+
   datasource:
     url: jdbc:h2:tcp://localhost/~/test
     username: sa
